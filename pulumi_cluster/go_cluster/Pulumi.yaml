@@ -1,0 +1,3 @@
+name: pulumi_cluster
+runtime: go
+description: aks cluster provisioned using pulumi
