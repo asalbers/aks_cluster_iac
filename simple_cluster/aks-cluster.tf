@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source = "hashicorp/azurerm"
-      version = "~>2.0"
+      version = "~>3.0"
     }
   }
   backend azurerm {
@@ -28,16 +28,16 @@ resource "azurerm_log_analytics_workspace" "aalog_analytics_wksp" {
     # The WorkSpace name has to be unique across the whole of azure, not just the current subscription/tenant.
     name                = "${var.log_analytics_workspace_name}-${random_id.log_analytics_workspace_name_suffix.dec}"
     location            = var.log_analytics_workspace_location
-    resource_group_name = azurerm_resource_group.k8s.name
+    resource_group_name = azurerm_resource_group.aks_rg.name
     sku                 = var.log_analytics_workspace_sku
 }
 
 resource "azurerm_log_analytics_solution" "aalog_analytics" {
     solution_name         = "ContainerInsights"
-    location              = azurerm_log_analytics_workspace.test.location
-    resource_group_name   = azurerm_resource_group.k8s.name
-    workspace_resource_id = azurerm_log_analytics_workspace.test.id
-    workspace_name        = azurerm_log_analytics_workspace.test.name
+    location              = azurerm_log_analytics_workspace.aalog_analytics_wksp.location
+    resource_group_name   = azurerm_resource_group.aks_rg.name
+    workspace_resource_id = azurerm_log_analytics_workspace.aalog_analytics_wksp.id
+    workspace_name        = azurerm_log_analytics_workspace.aalog_analytics_wksp.name
 
     plan {
         publisher = "Microsoft"
@@ -47,15 +47,16 @@ resource "azurerm_log_analytics_solution" "aalog_analytics" {
 
 resource "azurerm_kubernetes_cluster" "aks_cluster" {
     name                = var.cluster_name
-    location            = azurerm_resource_group.k8s.location
-    resource_group_name = azurerm_resource_group.k8s.name
+    location            = azurerm_resource_group.aks_rg.location
+    resource_group_name = azurerm_resource_group.aks_rg.name
     dns_prefix          = var.dns_prefix
-    
+    oidc_issuer_enabled = true
     #api_server_authorized_ip_ranges = ""
 
-    key_vault_secrets_provider {
-      
-    }
+    # key_vault_secrets_provider {
+    #   secret_rotation_enabled = true
+    #   secret_rotation_interval = 
+    # }
 
     linux_profile {
         admin_username = "ubuntu"
@@ -70,6 +71,8 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
         node_count      = var.agent_count
         vm_size         = "Standard_D2_v2"
         enable_auto_scaling = true
+        min_count = 1
+        max_count = 3
     }
 
     service_principal {
@@ -78,9 +81,15 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     }
 
     network_profile {
-        load_balancer_sku = "Standard"
+        load_balancer_sku = "standard"
         network_plugin = "kubenet"
     }
+
+    oms_agent {
+      log_analytics_workspace_id = azurerm_log_analytics_workspace.aalog_analytics_wksp.id
+
+    }
+
 
     tags = {
         Environment = "Development"
