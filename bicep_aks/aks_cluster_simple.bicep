@@ -1,5 +1,5 @@
 @description('The name of the Managed Cluster resource.')
-param clusterName string = 'aak8stest'
+param clusterName string = 'aa-k8s-test'
 
 @description('The location of the Managed Cluster resource.')
 param location string = resourceGroup().location
@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 param dnsPrefix string
 
 @description('Kubernetes version')
-param aksVersion string = '1.25.5'
+param aksVersion string = '1.29.0'
 @description('Disk size (in GB) to provision for each of the agent pool nodes. This value ranges from 0 to 1023. Specifying 0 will apply the default disk size for that agentVMSize.')
 @minValue(0)
 @maxValue(1023)
